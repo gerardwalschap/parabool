@@ -147,11 +147,11 @@
     ctx.fillText('x',W-18,oy-12); ctx.fillText('y',ox+10,18);
     ctx.font='14px system-ui,sans-serif';ctx.fillStyle=col.lab;
     ctx.textAlign='center';ctx.textBaseline='top';
-    for(let x=Math.ceil(v.xmin/stx)*stx;x<=v.xmax-stx/2;x+=stx){
+    for(let x=Math.ceil((v.xmin+stx/2)/stx)*stx;x<=v.xmax-stx/2;x+=stx){
       if(Math.abs(x)<1e-9) continue; ctx.fillText(fmt(x),sx(x,v),oy+5);
     }
     ctx.textAlign='right';ctx.textBaseline='middle';
-    for(let y=Math.ceil(v.ymin/sty)*sty;y<=v.ymax-sty/2;y+=sty){
+    for(let y=Math.ceil((v.ymin+sty/2)/sty)*sty;y<=v.ymax-sty/2;y+=sty){
       if(Math.abs(y)<1e-9) continue; ctx.fillText(fmt(y),ox-6,sy(y,v));
     }
     ctx.textAlign='right';ctx.textBaseline='top';ctx.fillText('0',ox-5,oy+5);
