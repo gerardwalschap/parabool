@@ -7,7 +7,7 @@
 <style>
   :root{
     --bg:#f6f7fb; --card:#fff; --ink:#1d2433; --muted:#6b7385; --line:#e3e6ee;
-    --f:#2563eb; --g:#e0632a; --ref:#9aa3b5; --accent:#2563eb;
+    --f:#2563eb; --g:#e0632a; --h:#16a34a; --ref:#9aa3b5; --accent:#2563eb;
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
@@ -20,13 +20,15 @@
   #plotCard{padding:10px;position:relative}
   canvas{width:100%;height:auto;display:block;border-radius:10px;touch-action:none;cursor:crosshair}
   .formula{font-size:1.5rem;font-weight:600;margin:0 0 10px;font-family:"Cambria Math","Times New Roman",serif}
-  .formula .fx{color:var(--f)} .formula .gx{color:var(--g)}
+  .formula .fx{color:var(--f)} .formula .gx{color:var(--g)} .formula .hx{color:var(--h)}
   label.small{font-size:.85rem;color:var(--muted)}
   .row{display:flex;align-items:center;gap:10px;margin:8px 0}
   input[type=range]{flex:1;accent-color:var(--f)}
   input[type=number]{width:84px;padding:6px 8px;font-size:1rem;border:1px solid var(--line);border-radius:8px}
   .g input[type=range]{accent-color:var(--g)}
   .g button:hover{background:#fdeee6}
+  .h input[type=range]{accent-color:var(--h)}
+  .h button:hover{background:#e7f6ec}
   button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer}
   button:hover{background:#eef2ff}
   .btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
@@ -92,10 +94,29 @@
       </div>
     </div>
 
-    <div class="section">
-      <label class="chk"><input type="checkbox" id="showRef" checked> toon y = x² als referentie (grijs, stippellijn)</label>
+    <div class="section h">
+      <p class="formula" style="font-size:1.5rem;margin:0 0 10px"><span class="hx">h(x) = <span id="hTxt">2</span>x²</span></p>
+      <label class="small" for="cRange">waarde van a</label>
+      <div class="row">
+        <input type="range" id="cRange" min="-5" max="5" step="0.1" value="2">
+        <input type="number" id="cNum" step="0.1" value="2">
+      </div>
+      <div class="err" id="cErr"></div>
+      <div class="btns">
+        <button data-c="1">a = 1</button>
+        <button data-c="2">a = 2</button>
+        <button data-c="0.5">a = ½</button>
+        <button data-c="-1">a = −1</button>
+        <button data-c="-3">a = −3</button>
+        <button data-c="0.25">a = ¼</button>
+      </div>
     </div>
-    <p class="hint">Tip: beweeg met de muis (of je vinger) over het rooster om de coördinaten van de punten op de grafieken van f en g te zien.</p>
+
+    <div class="section">
+      <label class="chk"><input type="checkbox" id="showRef" checked> toon y = x² als referentie (grijs, streepjeslijn)</label>
+      <label class="chk"><input type="checkbox" id="showRef2" checked> toon y = −x² als referentie (grijs, puntjeslijn)</label>
+    </div>
+    <p class="hint">Tip: beweeg met de muis (of je vinger) over het rooster om de coördinaten van de punten op de grafieken van f, g en h te zien.</p>
   </div>
 </div>
 
@@ -103,9 +124,9 @@
 (function(){
   const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
   const W=cv.width, H=cv.height;
-  const col={f:'#2563eb',g:'#e0632a',ref:'#9aa3b5',grid:'#eceff5',axis:'#1d2433',lab:'#6b7385'};
+  const col={f:'#2563eb',g:'#e0632a',h:'#16a34a',ref:'#9aa3b5',grid:'#eceff5',axis:'#1d2433',lab:'#6b7385'};
   const ZOOMS=[{x:2,y:2},{x:3,y:4},{x:5,y:8},{x:8,y:16},{x:12,y:30},{x:20,y:60}];
-  let zi=2, a=1, b=-1, hoverX=null;
+  let zi=2, a=1, b=-1, c2=2, hoverX=null;
 
   const $=id=>document.getElementById(id);
 
@@ -175,7 +196,9 @@
   function draw(){
     const v=view();
     drawGrid(v);
-    if($('showRef').checked) plot(1,col.ref,v,[8,6],2);
+    if($('showRef').checked) plot(1,col.ref,v,[10,6],2);
+    if($('showRef2').checked) plot(-1,col.ref,v,[2,5],2.5);
+    plot(c2,col.h,v,[],3.5);
     plot(b,col.g,v,[],3.5);
     plot(a,col.f,v,[],3.5);
     dot(0,0,col.axis,v,5);
@@ -184,20 +207,22 @@
 
     const c=$('coord');
     if(hoverX!==null){
-      const x=Math.round(wx(hoverX,v)*10)/10, y=a*x*x, y2=b*x*x;
+      const x=Math.round(wx(hoverX,v)*10)/10, y=a*x*x, y2=b*x*x, y3=c2*x*x;
       ctx.save();ctx.setLineDash([4,4]);ctx.lineWidth=1;
       ctx.strokeStyle=col.f;ctx.beginPath();ctx.moveTo(sx(x,v),sy(0,v));ctx.lineTo(sx(x,v),sy(y,v));ctx.lineTo(sx(0,v),sy(y,v));ctx.stroke();
       ctx.strokeStyle=col.g;ctx.beginPath();ctx.moveTo(sx(x,v),sy(0,v));ctx.lineTo(sx(x,v),sy(y2,v));ctx.lineTo(sx(0,v),sy(y2,v));ctx.stroke();
+      ctx.strokeStyle=col.h;ctx.beginPath();ctx.moveTo(sx(x,v),sy(0,v));ctx.lineTo(sx(x,v),sy(y3,v));ctx.lineTo(sx(0,v),sy(y3,v));ctx.stroke();
       ctx.restore();
-      dot(x,y,col.f,v,6);dot(x,y2,col.g,v,6);
+      dot(x,y,col.f,v,6);dot(x,y2,col.g,v,6);dot(x,y3,col.h,v,6);
       c.style.display='block';
-      c.innerHTML='<span style="color:'+col.f+'">f: ('+fmt(x)+' ; '+fmt(y)+')</span><br><span style="color:'+col.g+'">g: ('+fmt(x)+' ; '+fmt(y2)+')</span>';
+      c.innerHTML='<span style="color:'+col.f+'">f: ('+fmt(x)+' ; '+fmt(y)+')</span><br><span style="color:'+col.g+'">g: ('+fmt(x)+' ; '+fmt(y2)+')</span><br><span style="color:'+col.h+'">h: ('+fmt(x)+' ; '+fmt(y3)+')</span>';
     } else c.style.display='none';
   }
 
   function updateInfo(){
     $('fTxt').textContent=coefTxt(a);
     $('gTxt').textContent=coefTxt(b);
+    $('hTxt').textContent=coefTxt(c2);
   }
 
   function setA(val,src){
@@ -210,6 +235,13 @@
     b=Math.round(val*1000)/1000;
     if(src!=='range') $('bRange').value=Math.max(-5,Math.min(5,b));
     if(src!=='num') $('bNum').value=b;
+    updateInfo();draw();
+  }
+
+  function setC(val,src){
+    c2=Math.round(val*1000)/1000;
+    if(src!=='range') $('cRange').value=Math.max(-5,Math.min(5,c2));
+    if(src!=='num') $('cNum').value=c2;
     updateInfo();draw();
   }
 
@@ -231,6 +263,15 @@
   });
   document.querySelectorAll('[data-a]').forEach(btn=>btn.addEventListener('click',()=>{$('aErr').textContent='';setA(parseFloat(btn.dataset.a));}));
   $('showRef').addEventListener('change',draw);
+  $('showRef2').addEventListener('change',draw);
+  $('cRange').addEventListener('input',e=>{$('cErr').textContent='';setC(parseFloat(e.target.value),'range');});
+  $('cNum').addEventListener('input',e=>{
+    const v=parseNum(e.target.value);
+    if(isNaN(v)){$('cErr').textContent='Typ een getal, bv. 2 of -0.5';return;}
+    $('cErr').textContent = Math.abs(v)>5 ? 'Let op: de schuifbalk gaat maar van −5 tot 5.' : '';
+    setC(v,'num');
+  });
+  document.querySelectorAll('[data-c]').forEach(btn=>btn.addEventListener('click',()=>{$('cErr').textContent='';setC(parseFloat(btn.dataset.c));}));
   document.querySelectorAll('[data-b]').forEach(btn=>btn.addEventListener('click',()=>{$('bErr').textContent='';setB(parseFloat(btn.dataset.b));}));
 
   $('zin').onclick=()=>{if(zi>0){zi--;draw();}};
