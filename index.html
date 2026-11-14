@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="nl-BE">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Speel met f(x) = ax²</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#fff; --ink:#1d2433; --muted:#6b7385; --line:#e3e6ee;
+    --f:#2563eb; --g:#e0632a; --ref:#9aa3b5; --accent:#2563eb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{padding:18px 22px 6px}
+  h1{margin:0;font-size:1.45rem}
+  header p{margin:4px 0 0;color:var(--muted)}
+  .wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;padding:14px 22px 26px}
+  @media (max-width:900px){.wrap{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  #plotCard{padding:10px;position:relative}
+  canvas{width:100%;height:auto;display:block;border-radius:10px;touch-action:none;cursor:crosshair}
+  .formula{font-size:1.5rem;font-weight:600;margin:0 0 10px;font-family:"Cambria Math","Times New Roman",serif}
+  .formula .fx{color:var(--f)} .formula .gx{color:var(--g)}
+  label.small{font-size:.85rem;color:var(--muted)}
+  .row{display:flex;align-items:center;gap:10px;margin:8px 0}
+  input[type=range]{flex:1;accent-color:var(--f)}
+  input[type=number]{width:84px;padding:6px 8px;font-size:1rem;border:1px solid var(--line);border-radius:8px}
+  .g input[type=range]{accent-color:var(--g)}
+  .g button:hover{background:#fdeee6}
+  button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer}
+  button:hover{background:#eef2ff}
+  .btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .section{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  .chk{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.95rem}
+  .zoom{position:absolute;right:20px;top:20px;display:flex;gap:6px}
+  .zoom button{width:36px;height:36px;font-size:1.1rem;padding:0}
+  #coord{position:absolute;left:20px;top:20px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:.9rem;display:none}
+  .hint{font-size:.85rem;color:var(--muted);margin-top:6px}
+  .err{color:#c0262d;font-size:.85rem;min-height:1em}
+</style>
+</head>
+<body>
+<header>
+  <h1>Speel met de parabool f(x) = ax²</h1>
+  <p>Verschuif de schuifbalk of typ zelf een waarde voor a. Wat gebeurt er met de grafiek?</p>
+</header>
+
+<div class="wrap">
+  <div class="card" id="plotCard">
+    <canvas id="cv" width="900" height="680"></canvas>
+    <div id="coord"></div>
+    <div class="zoom">
+      <button id="zin" title="Inzoomen">+</button>
+      <button id="zout" title="Uitzoomen">−</button>
+      <button id="zreset" title="Standaardzicht">⟲</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="formula"><span class="fx">f(x) = <span id="fTxt">1</span>x²</span></p>
+
+    <label class="small" for="aRange">waarde van a</label>
+    <div class="row">
+      <input type="range" id="aRange" min="-5" max="5" step="0.1" value="1">
+      <input type="number" id="aNum" step="0.1" value="1">
+    </div>
+    <div class="err" id="aErr"></div>
+    <div class="btns">
+      <button data-a="1">a = 1</button>
+      <button data-a="2">a = 2</button>
+      <button data-a="0.5">a = ½</button>
+      <button data-a="-1">a = −1</button>
+      <button data-a="-3">a = −3</button>
+      <button data-a="0.25">a = ¼</button>
+    </div>
+
+    <div class="section g">
+      <p class="formula" style="font-size:1.5rem;margin:0 0 10px"><span class="gx">g(x) = <span id="gTxt">−1</span>x²</span></p>
+      <label class="small" for="bRange">waarde van a</label>
+      <div class="row">
+        <input type="range" id="bRange" min="-5" max="5" step="0.1" value="-1">
+        <input type="number" id="bNum" step="0.1" value="-1">
+      </div>
+      <div class="err" id="bErr"></div>
+      <div class="btns">
+        <button data-b="1">a = 1</button>
+        <button data-b="2">a = 2</button>
+        <button data-b="0.5">a = ½</button>
+        <button data-b="-1">a = −1</button>
+        <button data-b="-3">a = −3</button>
+        <button data-b="0.25">a = ¼</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <label class="chk"><input type="checkbox" id="showRef" checked> toon y = x² als referentie (grijs, stippellijn)</label>
+    </div>
+    <p class="hint">Tip: beweeg met de muis (of je vinger) over het rooster om de coördinaten van de punten op de grafieken van f en g te zien.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  const W=cv.width, H=cv.height;
+  const col={f:'#2563eb',g:'#e0632a',ref:'#9aa3b5',grid:'#eceff5',axis:'#1d2433',lab:'#6b7385'};
+  const ZOOMS=[{x:2,y:2},{x:3,y:4},{x:5,y:8},{x:8,y:16},{x:12,y:30},{x:20,y:60}];
+  let zi=2, a=1, b=-1, hoverX=null;
+
+  const $=id=>document.getElementById(id);
+
+  function fmt(v){
+    if(Math.abs(v)<1e-9) v=0;
+    let s=(Math.round(v*1000)/1000).toString().replace('.',',');
+    return s.replace('-','−');
+  }
+  function coefTxt(v){
+    if(v===1) return '';
+    if(v===-1) return '−';
+    return fmt(v);
+  }
+
+  function view(){ const z=ZOOMS[zi]; return {xmin:-z.x,xmax:z.x,ymin:-z.y,ymax:z.y}; }
+  function sx(x,v){return (x-v.xmin)/(v.xmax-v.xmin)*W;}
+  function sy(y,v){return H-(y-v.ymin)/(v.ymax-v.ymin)*H;}
+  function wx(px,v){return v.xmin+px/W*(v.xmax-v.xmin);}
+
+  function niceStep(range){
+    const raw=range/10, p=Math.pow(10,Math.floor(Math.log10(raw)));
+    const m=raw/p; return (m<1.5?1:m<3.5?2:m<7.5?5:10)*p;
+  }
+
+  function drawGrid(v){
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+    const stx=niceStep(v.xmax-v.xmin), sty=niceStep(v.ymax-v.ymin);
+    ctx.lineWidth=1;ctx.strokeStyle=col.grid;
+    for(let x=Math.ceil(v.xmin/stx)*stx;x<=v.xmax;x+=stx){ctx.beginPath();ctx.moveTo(sx(x,v),0);ctx.lineTo(sx(x,v),H);ctx.stroke();}
+    for(let y=Math.ceil(v.ymin/sty)*sty;y<=v.ymax;y+=sty){ctx.beginPath();ctx.moveTo(0,sy(y,v));ctx.lineTo(W,sy(y,v));ctx.stroke();}
+    ctx.strokeStyle=col.axis;ctx.lineWidth=1.6;
+    const ox=sx(0,v), oy=sy(0,v);
+    ctx.beginPath();ctx.moveTo(0,oy);ctx.lineTo(W,oy);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(ox,H);ctx.lineTo(ox,0);ctx.stroke();
+    ctx.fillStyle=col.axis;
+    ctx.beginPath();ctx.moveTo(W,oy);ctx.lineTo(W-12,oy-6);ctx.lineTo(W-12,oy+6);ctx.fill();
+    ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox-6,12);ctx.lineTo(ox+6,12);ctx.fill();
+    ctx.font='italic 18px "Times New Roman",serif';
+    ctx.fillText('x',W-18,oy-12); ctx.fillText('y',ox+10,18);
+    ctx.font='14px system-ui,sans-serif';ctx.fillStyle=col.lab;
+    ctx.textAlign='center';ctx.textBaseline='top';
+    for(let x=Math.ceil(v.xmin/stx)*stx;x<=v.xmax-stx/2;x+=stx){
+      if(Math.abs(x)<1e-9) continue; ctx.fillText(fmt(x),sx(x,v),oy+5);
+    }
+    ctx.textAlign='right';ctx.textBaseline='middle';
+    for(let y=Math.ceil(v.ymin/sty)*sty;y<=v.ymax-sty/2;y+=sty){
+      if(Math.abs(y)<1e-9) continue; ctx.fillText(fmt(y),ox-6,sy(y,v));
+    }
+    ctx.textAlign='right';ctx.textBaseline='top';ctx.fillText('0',ox-5,oy+5);
+  }
+
+  function plot(c,color,v,dash,width){
+    ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash||[]);
+    ctx.beginPath();let started=false;
+    for(let px=0;px<=W;px+=1){
+      const x=wx(px,v), y=c*x*x, py=sy(y,v);
+      if(py<-2000||py>H+2000){started=false;continue;}
+      if(!started){ctx.moveTo(px,py);started=true;} else ctx.lineTo(px,py);
+    }
+    ctx.stroke();ctx.restore();
+  }
+
+  function dot(x,y,color,v,r){
+    ctx.fillStyle=color;ctx.beginPath();ctx.arc(sx(x,v),sy(y,v),r||5,0,2*Math.PI);ctx.fill();
+  }
+
+  function draw(){
+    const v=view();
+    drawGrid(v);
+    if($('showRef').checked) plot(1,col.ref,v,[8,6],2);
+    plot(b,col.g,v,[],3.5);
+    plot(a,col.f,v,[],3.5);
+    dot(0,0,col.axis,v,5);
+    ctx.font='bold 15px system-ui,sans-serif';ctx.fillStyle=col.axis;ctx.textAlign='left';ctx.textBaseline='bottom';
+    ctx.fillText('T',sx(0,v)+8,sy(0,v)-(a<0?-22:4));
+
+    const c=$('coord');
+    if(hoverX!==null){
+      const x=Math.round(wx(hoverX,v)*10)/10, y=a*x*x, y2=b*x*x;
+      ctx.save();ctx.setLineDash([4,4]);ctx.lineWidth=1;
+      ctx.strokeStyle=col.f;ctx.beginPath();ctx.moveTo(sx(x,v),sy(0,v));ctx.lineTo(sx(x,v),sy(y,v));ctx.lineTo(sx(0,v),sy(y,v));ctx.stroke();
+      ctx.strokeStyle=col.g;ctx.beginPath();ctx.moveTo(sx(x,v),sy(0,v));ctx.lineTo(sx(x,v),sy(y2,v));ctx.lineTo(sx(0,v),sy(y2,v));ctx.stroke();
+      ctx.restore();
+      dot(x,y,col.f,v,6);dot(x,y2,col.g,v,6);
+      c.style.display='block';
+      c.innerHTML='<span style="color:'+col.f+'">f: ('+fmt(x)+' ; '+fmt(y)+')</span><br><span style="color:'+col.g+'">g: ('+fmt(x)+' ; '+fmt(y2)+')</span>';
+    } else c.style.display='none';
+  }
+
+  function updateInfo(){
+    $('fTxt').textContent=coefTxt(a);
+    $('gTxt').textContent=coefTxt(b);
+  }
+
+  function setA(val,src){
+    a=Math.round(val*1000)/1000;
+    if(src!=='range') $('aRange').value=Math.max(-5,Math.min(5,a));
+    if(src!=='num') $('aNum').value=a;
+    updateInfo();draw();
+  }
+  function setB(val,src){
+    b=Math.round(val*1000)/1000;
+    if(src!=='range') $('bRange').value=Math.max(-5,Math.min(5,b));
+    if(src!=='num') $('bNum').value=b;
+    updateInfo();draw();
+  }
+
+  function parseNum(s){ return parseFloat(String(s).replace(',','.').replace('−','-')); }
+
+  $('aRange').addEventListener('input',e=>{$('aErr').textContent='';setA(parseFloat(e.target.value),'range');});
+  $('aNum').addEventListener('input',e=>{
+    const v=parseNum(e.target.value);
+    if(isNaN(v)){$('aErr').textContent='Typ een getal, bv. 2 of -0.5';return;}
+    $('aErr').textContent = Math.abs(v)>5 ? 'Let op: de schuifbalk gaat maar van −5 tot 5.' : '';
+    setA(v,'num');
+  });
+  $('bRange').addEventListener('input',e=>{$('bErr').textContent='';setB(parseFloat(e.target.value),'range');});
+  $('bNum').addEventListener('input',e=>{
+    const v=parseNum(e.target.value);
+    if(isNaN(v)){$('bErr').textContent='Typ een getal, bv. 2 of -0.5';return;}
+    $('bErr').textContent = Math.abs(v)>5 ? 'Let op: de schuifbalk gaat maar van −5 tot 5.' : '';
+    setB(v,'num');
+  });
+  document.querySelectorAll('[data-a]').forEach(btn=>btn.addEventListener('click',()=>{$('aErr').textContent='';setA(parseFloat(btn.dataset.a));}));
+  $('showRef').addEventListener('change',draw);
+  document.querySelectorAll('[data-b]').forEach(btn=>btn.addEventListener('click',()=>{$('bErr').textContent='';setB(parseFloat(btn.dataset.b));}));
+
+  $('zin').onclick=()=>{if(zi>0){zi--;draw();}};
+  $('zout').onclick=()=>{if(zi<ZOOMS.length-1){zi++;draw();}};
+  $('zreset').onclick=()=>{zi=2;draw();};
+
+  function pointer(e){
+    const r=cv.getBoundingClientRect();
+    hoverX=(e.clientX-r.left)/r.width*W; draw();
+  }
+  cv.addEventListener('pointermove',pointer);
+  cv.addEventListener('pointerdown',pointer);
+  cv.addEventListener('pointerleave',()=>{hoverX=null;draw();});
+
+  updateInfo();draw();
+})();
+</script>
+</body>
+</html>
